@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -14,7 +13,8 @@ struct database_header_t
 
 int main(int argc, char *argv[])
 {
-    struct database_header_t head = {0};    
+    struct database_header_t head = {0};
+    struct stat dbStat = {0};
 
     if (argc != 2)
     {
@@ -40,7 +40,22 @@ int main(int argc, char *argv[])
     printf("DB Number of Employees: %u\n", head.employees);
     printf("DB File Size: %u\n", head.filesize);
 
-    close(fd);
+    if (fstat(fd, &dbStat) < 0)
+    {
+        perror("fstat");
+        close(fd);
+        return -1;
+    }
 
+    printf("DB File Size, reported by stat: %lu\n", dbStat.st_size);
+
+    if (dbStat.st_size != head.filesize)
+    {
+        printf("Malformed database data detected.\n");
+        close(fd);
+        return -2;
+    }
+
+    close(fd);
     return 0;
 }
