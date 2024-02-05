@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "../include/common.h"
 #include "../include/file.h"
@@ -18,11 +19,13 @@ int main(int argc, char *argv[])
     bool newFile = false;
     char *filepath = NULL;
     int c;
+    char *addstring = NULL;
 
     int dbfd = -1;
     struct dbheader_t *dbhdr = NULL;
+    struct employee_t *employees = NULL;
 
-    while ((c = getopt(argc, argv, "nf:")) != -1)
+    while ((c = getopt(argc, argv, "nf:a:")) != -1)
     {
         switch (c)
         {
@@ -31,6 +34,9 @@ int main(int argc, char *argv[])
                 break;
             case 'f':
                 filepath = optarg; // optarg exists becaues of the : after f in getopt 
+                break;
+            case 'a':
+                addstring = optarg;
                 break;
             case '?':
                 printf("Unknown option -%c\n", c);
@@ -79,7 +85,20 @@ int main(int argc, char *argv[])
     printf("Newfile: %d\n", newFile);
     printf("Filepath: %s\n", filepath);
 
-    if (output_file(dbfd, dbhdr) == STATUS_ERROR)
+    if (read_employees(dbfd, dbhdr, &employees) == STATUS_ERROR)
+    {
+        printf("Failed to read employees\n");
+        return -1;
+    }
+
+    if (addstring)
+    {
+        dbhdr->count++;
+        employees = realloc(employees, dbhdr->count*(sizeof(struct employee_t)));
+        add_employee(dbhdr, employees, addstring);
+    }
+
+    if (output_file(dbfd, dbhdr, employees) == STATUS_ERROR)
     {
         printf("Unable to write to database file\n");
         return -1;

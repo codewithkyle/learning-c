@@ -3,11 +3,25 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <string.h>
 
 #include "../include/parse.h"
 #include "../include/common.h"
 
-int output_file(int fd, struct dbheader_t *dbhdr)
+int add_employee(struct dbheader_t *dbhdr, struct employee_t *employees, char *addstring)
+{
+    char *name = strtok(addstring, ",");
+    char *addr = strtok(NULL, ",");
+    char *hours = strtok(NULL, ",");
+
+    strncpy(employees[dbhdr->count-1].name, name, sizeof(employees[dbhdr->count-1].name));
+    strncpy(employees[dbhdr->count-1].address, addr, sizeof(employees[dbhdr->count-1].address));
+    employees[dbhdr->count-1].hours = atoi(hours);
+    
+    return STATUS_SUCCESS;
+}
+
+int read_employees(int fd, struct dbheader_t *dbhdr, struct employee_t **employeesOut)
 {
     if (fd < 0)
     {
@@ -15,8 +29,44 @@ int output_file(int fd, struct dbheader_t *dbhdr)
         return STATUS_ERROR;
     }
 
+    int count = dbhdr->count;
+
+    struct employee_t *employees = calloc(count, sizeof(struct employee_t));
+    if (employees == NULL)
+    {
+        printf("Employee memroy allocation failed\n");
+        return STATUS_ERROR;
+    }
+
+    if (read(fd, employees, count*sizeof(struct employee_t)) == -1)
+    {
+        perror("read");
+        free(employees);
+        return STATUS_ERROR;
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        employees[i].hours = ntohl(employees[i].hours);
+    }
+
+    *employeesOut = employees;
+
+    return STATUS_SUCCESS;
+}
+
+int output_file(int fd, struct dbheader_t *dbhdr, struct employee_t *employees)
+{
+    if (fd < 0)
+    {
+        printf("Got a bad file from the user\n");
+        return STATUS_ERROR;
+    }
+
+    int realcount = dbhdr->count;
+
     dbhdr->magic = htonl(dbhdr->magic);
-    dbhdr->filesize = htonl(dbhdr->filesize);
+    dbhdr->filesize = htonl(sizeof(struct dbheader_t) + (sizeof(struct employee_t) * realcount));
     dbhdr->count = htons(dbhdr->count);
     dbhdr->version = htons(dbhdr->version);
 
@@ -25,6 +75,16 @@ int output_file(int fd, struct dbheader_t *dbhdr)
     {
         printf("Failed to write database header\n");
         return STATUS_ERROR;
+    }
+
+    for (int i = 0; i < realcount; i++)
+    {
+        employees[i].hours = htonl(employees[i].hours);
+        if (write(fd, &employees[i], sizeof(struct employee_t)) == -1)
+        {
+            printf("Failed to write employee to database\n");
+            return STATUS_ERROR;
+        }
     }
 
     return STATUS_SUCCESS;
