@@ -7,6 +7,7 @@
     - [x] Parse and insert employees (`"Demo Dean,123 Fake St.,120"`) into database
     - [x] List out all employees from the database file
 - [ ] Go beyond the course project and add the following:
+    - [ ] Write tests
     - [ ] Delete an employee by id or name
     - [ ] List out employees by name
     - [ ] Update an employees name, address, or hours worked
