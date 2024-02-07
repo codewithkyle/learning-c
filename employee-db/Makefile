@@ -10,9 +10,10 @@ run: clean default
 default: $(TARGET)
 
 clean:
-		rm -f obj/*.o
-		rm -f bin/*
-		rm -f *.db
+		rm -rf ./obj
+		rm -rf ./bin
+		rm -f ./*.db
+		mkdir ./obj ./bin
 
 $(TARGET): $(OBJ)
 		gcc -o $@ $?
